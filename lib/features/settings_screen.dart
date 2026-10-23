@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../app/app_controller.dart';
 import '../app/ai_settings_controller.dart';
+import 'app_update_card.dart';
 import 'ui_components.dart';
 
 class SettingsScreen extends ConsumerStatefulWidget {
@@ -34,7 +35,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         SwitchListTile(key: const ValueKey('groq-toggle'), contentPadding: EdgeInsets.zero, value: config.enabled, onChanged: disabled || !config.hasKey ? null : (value) => _run(() async {
           await ref.read(aiSettingsProvider.notifier).setEnabled(value);
           await ref.read(appProvider.notifier).refreshMatching();
-          if (mounted) message = value ? 'AI ranking enabled. See the result below.' : 'AI disabled. Offline matches restored.';
+          if (mounted) message = value ? 'AI setting saved. See the ranking result below.' : 'AI disabled. Offline matches restored.';
         }), title: const Text('Use Groq AI ranking'), subtitle: Text(config.hasKey ? 'Sends only skills, target roles, location and saved job text to Groq when enabled. No name, email, phone or resume file is sent.' : 'Save a key to enable AI ranking. Offline matching remains available.')),
         const SizedBox(height: 12), TextField(key: const ValueKey('groq-key'), controller: keyController, obscureText: true, enableSuggestions: false, autocorrect: false, decoration: InputDecoration(labelText: 'Groq API key (optional)', hintText: config.hasKey ? 'Key saved securely. Enter a replacement.' : 'Enter your own Groq key')),
         GradientButton(label: busy ? 'Please wait...' : 'Save key on this device', onPressed: disabled ? null : () => _run(() async {
@@ -54,6 +55,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         if (groqMessage.isNotEmpty) Padding(padding: const EdgeInsets.only(top: 12), child: Text(groqMessage, key: const ValueKey('groq-result'))),
       ])),
       const PilotCard(child: Text('Keys embedded in an APK can be extracted. Secure device storage reduces exposure but cannot protect a key on a compromised device. Never ship a shared key. Use your own key or a secure backend for public AI releases.', style: TextStyle(color: Color(0xFFF3DCB4), height: 1.5))),
+      const AppUpdateCard(),
       sectionHeading('Theme'), const PilotCard(child: Text('Dark navy • blue and violet accents\nThe approved dark theme is unchanged.')),
       sectionHeading('Local data'), const Text('Delete the saved resume, profile, jobs, tracker and optional key. The app stays empty after clearing.', style: TextStyle(color: muted, height: 1.5)),
       const SizedBox(height: 12), OutlinedButton(onPressed: disabled ? null : () async {
