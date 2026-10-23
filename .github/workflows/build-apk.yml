@@ -29,25 +29,10 @@ jobs:
           flutter doctor -v
           java -version
       - name: Prepare maintenance sources
-        run: python3 tool/apply_mvp_update.py
-      - name: Generate Android scaffold if missing
-        run: |
-          if [ ! -d android ]; then
-            flutter create --platforms=android --org com.ambi.jobpilot --project-name jobpilot_ai /tmp/jobpilot_scaffold
-            cp -R /tmp/jobpilot_scaffold/android .
-            cp /tmp/jobpilot_scaffold/.metadata .
-          fi
-          python3 - <<'PY'
-          from pathlib import Path
-          path = Path('android/app/src/main/AndroidManifest.xml')
-          text = path.read_text().replace('android:label="jobpilot_ai"', 'android:label="JobPilot AI"')
-          if 'android:allowBackup=' not in text:
-              text = text.replace('<application', '<application android:allowBackup="false"')
-          path.write_text(text)
-          PY
+        run: python3 tool/prepare_sources.py
       - name: Resolve dependencies
         run: flutter pub get
-      - name: Commit generated Android configuration and maintenance source
+      - name: Commit maintained source and lockfile
         run: |
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
@@ -84,9 +69,5 @@ jobs:
         run: |
           cp build/app/outputs/flutter-apk/app-release.apk JobPilot-AI.apk
           NOTES='Phase 1: offline resume prefill and matching, manual tracker, fictional sample jobs with a hide switch. Original vector logo. arm64-v8a only. R8/resource shrinking. Analyze and tests passed in this CI run. Development debug-key signing. Owner tested the earlier MVP; this maintenance build has not been tested on a phone.'
-          if gh release view v0.1.0 >/dev/null 2>&1; then
-            gh release upload v0.1.0 JobPilot-AI.apk --clobber
-            gh release edit v0.1.0 --notes "$NOTES"
-          else
-            gh release create v0.1.0 JobPilot-AI.apk --target main --title 'JobPilot AI Phase 1 MVP' --notes "$NOTES"
-          fi
+          gh release upload v0.1.0 JobPilot-AI.apk --clobber
+          gh release edit v0.1.0 --notes "$NOTES"
