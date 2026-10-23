@@ -41,16 +41,16 @@ void main() {
     expect(store.values.containsKey('groq_api_key'), isFalse);
   });
   testWidgets('actual Settings toggle becomes enabled after saving a device key', (tester) async {
+    await tester.binding.setSurfaceSize(const Size(800, 1400));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
     final store = MemoryStore();
     await tester.pumpWidget(ProviderScope(overrides: [deviceKeyStoreProvider.overrideWithValue(store), appProvider.overrideWith(EmptyController.new)], child: const MaterialApp(home: SettingsScreen())));
     await tester.pumpAndSettle();
     expect(tester.widget<SwitchListTile>(find.byKey(const ValueKey('groq-toggle'))).onChanged, isNull);
     await tester.enterText(find.byKey(const ValueKey('groq-key')), 'test-only-placeholder');
-    await tester.ensureVisible(find.text('Save key on this device'));
     await tester.tap(find.text('Save key on this device'));
     await tester.pumpAndSettle();
     expect(tester.widget<SwitchListTile>(find.byKey(const ValueKey('groq-toggle'))).onChanged, isNotNull);
-    await tester.ensureVisible(find.byKey(const ValueKey('groq-toggle')));
     await tester.tap(find.byType(Switch).first);
     await tester.pumpAndSettle();
     expect(tester.widget<SwitchListTile>(find.byKey(const ValueKey('groq-toggle'))).value, isTrue);

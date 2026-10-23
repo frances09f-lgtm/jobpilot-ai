@@ -57,6 +57,6 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           cp build/app/outputs/flutter-apk/app-release.apk JobPilot-AI.apk
-          NOTES='Phase 1: offline resume prefill including address/PIN text, local manual jobs, matching and manual tracker. No bundled demo jobs; upgrade removes legacy demo records. Navy/blue/violet logo and UI. arm64-v8a only, R8/resource shrinking. Analyze and tests passed in this CI run. Development debug-key signing. This update has not been tested on a phone.'
+          NOTES='JobPilot 0.1.1+4: no bundled demo jobs, legacy demo migration, local manual jobs and tracker, address/PIN resume prefill, original navy/blue/violet logo. Optional Groq ranking with your device-stored key; offline fallback on errors, invalid key and rate limits. Analyze and tests passed in this CI run. Groq transport/validation uses mocked tests; no real key or live authenticated Groq call was tested. arm64-v8a only, R8/resource shrinking, development debug-key signing. Not tested on a phone.'
           gh release upload v0.1.0 JobPilot-AI.apk --clobber
           gh release edit v0.1.0 --notes "$NOTES"
