@@ -28,6 +28,8 @@ jobs:
           flutter --version
           flutter doctor -v
           java -version
+      - name: Prepare maintenance sources
+        run: python3 tool/apply_mvp_update.py
       - name: Generate Android scaffold if missing
         run: |
           if [ ! -d android ]; then
@@ -45,13 +47,13 @@ jobs:
           PY
       - name: Resolve dependencies
         run: flutter pub get
-      - name: Commit generated Android configuration and lockfile
+      - name: Commit generated Android configuration and maintenance source
         run: |
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add android .metadata pubspec.lock
+          git add android .metadata pubspec.lock pubspec.yaml lib test README.md
           if ! git diff --cached --quiet; then
-            git commit -m 'Persist generated Android scaffold and dependency lock [skip ci]'
+            git commit -m 'Persist maintained profile, logo and sample visibility source [skip ci]'
             git push origin HEAD:main
           fi
       - name: Analyze
@@ -60,8 +62,15 @@ jobs:
         run: flutter test --reporter expanded
       - name: Build release APK (arm64-v8a only)
         run: flutter build apk --release --target-platform android-arm64 --split-debug-info=build/symbols
-      - name: Report APK size
-        run: ls -l build/app/outputs/flutter-apk/
+      - name: Report APK size and native components
+        run: |
+          ls -l build/app/outputs/flutter-apk/
+          python3 - <<'PY'
+          import zipfile
+          with zipfile.ZipFile('build/app/outputs/flutter-apk/app-release.apk') as z:
+              for i in sorted((i for i in z.infolist() if i.filename.endswith('.so')), key=lambda i: i.file_size, reverse=True):
+                  print(f'{i.filename}: {i.file_size} unpacked bytes, {i.compress_size} ZIP bytes')
+          PY
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
@@ -74,7 +83,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           cp build/app/outputs/flutter-apk/app-release.apk JobPilot-AI.apk
-          NOTES='Offline resume matching and manual tracker. Sample jobs only. Development APK, debug-keystore signing, arm64-v8a only (64-bit phones). Analyze and tests passed in CI; not tested on a real phone.'
+          NOTES='Phase 1: offline resume prefill and matching, manual tracker, fictional sample jobs with a hide switch. Original vector logo. arm64-v8a only. R8/resource shrinking. Analyze and tests passed in this CI run. Development debug-key signing. Owner tested the earlier MVP; this maintenance build has not been tested on a phone.'
           if gh release view v0.1.0 >/dev/null 2>&1; then
             gh release upload v0.1.0 JobPilot-AI.apk --clobber
             gh release edit v0.1.0 --notes "$NOTES"
