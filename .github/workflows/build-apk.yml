@@ -53,10 +53,20 @@ jobs:
           if-no-files-found: error
           retention-days: 30
       - name: Publish public APK release
+        if: github.ref == 'refs/heads/main'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           cp build/app/outputs/flutter-apk/app-release.apk JobPilot-AI.apk
-          NOTES='JobPilot 0.1.1+4: no bundled demo jobs, legacy demo migration, local manual jobs and tracker, address/PIN resume prefill, original navy/blue/violet logo. Optional Groq ranking with your device-stored key; offline fallback on errors, invalid key and rate limits. Analyze and tests passed in this CI run. Groq transport/validation uses mocked tests; no real key or live authenticated Groq call was tested. arm64-v8a only, R8/resource shrinking, development debug-key signing. Not tested on a phone.'
-          gh release upload v0.1.0 JobPilot-AI.apk --clobber
-          gh release edit v0.1.0 --notes "$NOTES"
+          python3 - <<'PY'
+          import json, re, hashlib
+          from pathlib import Path
+          version = re.search(r'^version:\s*(\S+)', Path('pubspec.yaml').read_text(), re.M).group(1)
+          apk = Path('JobPilot-AI.apk')
+          data = {'version': version, 'apk_url': 'https://github.com/frances09f-lgtm/jobpilot-ai/releases/download/v0.1.0/JobPilot-AI.apk', 'size_bytes': apk.stat().st_size, 'sha256': hashlib.sha256(apk.read_bytes()).hexdigest()}
+          Path('jobpilot-release.json').write_text(json.dumps(data))
+          PY
+          VERSION=$(python3 -c "import json; print(json.load(open('jobpilot-release.json'))['version'])")
+          NOTES="JobPilot $VERSION: no demo jobs or sample badges, local manual jobs, address/PIN prefill, optional device-key Groq ranking with offline fallback and in-app update check. Version metadata accompanies the fixed v0.1.0 APK link. Analyze and tests passed in this CI run. Groq and updater HTTP tests use mocks; no authenticated Groq call or phone test was performed. arm64-v8a only, R8/resource shrinking, development debug-key signing."
+          gh release upload v0.1.0 JobPilot-AI.apk jobpilot-release.json --clobber
+          gh release edit v0.1.0 --title "JobPilot AI $VERSION" --notes "$NOTES"
