@@ -58,8 +58,10 @@ jobs:
         run: flutter analyze
       - name: Unit tests
         run: flutter test --reporter expanded
-      - name: Build release APK
-        run: flutter build apk --release
+      - name: Build release APK (arm64-v8a only)
+        run: flutter build apk --release --target-platform android-arm64 --split-debug-info=build/symbols
+      - name: Report APK size
+        run: ls -l build/app/outputs/flutter-apk/
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
@@ -72,8 +74,10 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           cp build/app/outputs/flutter-apk/app-release.apk JobPilot-AI.apk
+          NOTES='Offline resume matching and manual tracker. Sample jobs only. Development APK, debug-keystore signing, arm64-v8a only (64-bit phones). Analyze and tests passed in CI; not tested on a real phone.'
           if gh release view v0.1.0 >/dev/null 2>&1; then
             gh release upload v0.1.0 JobPilot-AI.apk --clobber
+            gh release edit v0.1.0 --notes "$NOTES"
           else
-            gh release create v0.1.0 JobPilot-AI.apk --target main --title 'JobPilot AI Phase 1 MVP' --notes 'Offline resume matching and manual tracker. Sample jobs only. Development APK, debug-keystore signing. Analyze and tests passed in CI; not tested on a real phone.'
+            gh release create v0.1.0 JobPilot-AI.apk --target main --title 'JobPilot AI Phase 1 MVP' --notes "$NOTES"
           fi
