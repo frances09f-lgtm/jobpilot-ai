@@ -11,13 +11,11 @@ import '../data/models.dart';
 
 final repositoryProvider = Provider((ref) => LocalRepository());
 final appProvider = AsyncNotifierProvider<AppController, AppData>(AppController.new);
-
 class AppData {
   const AppData(this.profile, this.jobs);
   final ResumeProfile profile;
   final List<Job> jobs;
 }
-
 class AppController extends AsyncNotifier<AppData> {
   LocalRepository get repo => ref.read(repositoryProvider);
   @override
@@ -28,22 +26,25 @@ class AppController extends AsyncNotifier<AppData> {
     await repo.saveJobs(jobs);
     return AppData(profile, jobs);
   }
-
-  Future<ResumeProfile?> importResume() async {
+  Future<ResumeProfile?> importResume({void Function(int)? onStage}) async {
     final file = await FilePicker.pickFile(type: FileType.custom, allowedExtensions: ['pdf', 'docx']);
     if (file == null) return null;
+    onStage?.call(0);
     final length = file.lengthSync() ?? await file.length();
     if (length != null && length > DocumentExtractor.maxBytes) throw const FormatException('Choose a resume under 10 MB.');
     final bytes = await file.readAsBytes();
+    onStage?.call(1);
     final text = await DocumentExtractor().extract(file.name, bytes);
+    onStage?.call(2);
+    final profile = ResumeParser().parse(text, resumeName: file.name);
+    onStage?.call(3);
     final directory = await getApplicationDocumentsDirectory();
     final resumeDirectory = Directory(p.join(directory.path, 'resumes'));
     await resumeDirectory.create(recursive: true);
     final path = p.join(resumeDirectory.path, 'resume_${DateTime.now().microsecondsSinceEpoch}.${file.name.split('.').last.toLowerCase()}');
     await File(path).writeAsBytes(bytes, flush: true);
-    return ResumeParser().parse(text, resumePath: path, resumeName: file.name);
+    return ResumeProfile(fields: profile.fields, rawText: text, resumePath: path, resumeName: file.name);
   }
-
   Future<void> saveProfile(ResumeProfile profile) async {
     final current = state.requireValue;
     final jobs = current.jobs.map((j) => MatchingService().match(j, profile)).toList();
