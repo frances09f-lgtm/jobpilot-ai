@@ -8,12 +8,15 @@ class LocalRepository {
   Database? _database;
   Future<Database> get database async {
     if (_database != null) return _database!;
-    _database = await openDatabase(p.join(await getDatabasesPath(), 'jobpilot.db'), version: 1, onCreate: (db, version) async {
+    _database = await openDatabase(p.join(await getDatabasesPath(), 'jobpilot.db'), version: 2, onCreate: (db, version) async {
       await db.execute('CREATE TABLE profile (id INTEGER PRIMARY KEY CHECK(id = 1), data TEXT NOT NULL)');
       await db.execute('CREATE TABLE jobs (id TEXT PRIMARY KEY, title TEXT NOT NULL, company TEXT NOT NULL, location TEXT NOT NULL, description TEXT NOT NULL, skills TEXT NOT NULL, source TEXT NOT NULL, application_url TEXT NOT NULL, score INTEGER NOT NULL, matched_skills TEXT NOT NULL, gaps TEXT NOT NULL, explanation TEXT NOT NULL, status TEXT NOT NULL, updated_at TEXT NOT NULL, error TEXT NOT NULL, is_sample INTEGER NOT NULL, UNIQUE(title, company, location, source))');
       await db.execute('CREATE TABLE status_history (id INTEGER PRIMARY KEY AUTOINCREMENT, job_id TEXT NOT NULL, status TEXT NOT NULL, changed_at TEXT NOT NULL, note TEXT NOT NULL)');
-    });
-    return _database!;
+            await db.execute('CREATE TABLE app_settings (key TEXT PRIMARY KEY, value TEXT NOT NULL)');
+      }, onUpgrade: (db, oldVersion, newVersion) async {
+        if (oldVersion < 2) await db.execute('CREATE TABLE IF NOT EXISTS app_settings (key TEXT PRIMARY KEY, value TEXT NOT NULL)');
+      });
+      return _database!;
   }
   Future<void> seed() async {
     final db = await database;
@@ -47,12 +50,20 @@ class LocalRepository {
       await txn.insert('status_history', {'job_id': job.id, 'status': job.status.name, 'changed_at': job.updatedAt, 'note': job.error});
     });
   }
-  Future<void> clearAll() async {
+      Future<bool> loadHideSampleJobs() async {
+      final rows = await (await database).query('app_settings', where: 'key = ?', whereArgs: ['hide_sample_jobs']);
+      return rows.isNotEmpty && rows.first['value'] == 'true';
+    }
+    Future<void> saveHideSampleJobs(bool value) async {
+      await (await database).insert('app_settings', {'key': 'hide_sample_jobs', 'value': value.toString()}, conflictAlgorithm: ConflictAlgorithm.replace);
+    }
+    Future<void> clearAll() async {
     final db = await database;
     await db.transaction((txn) async {
       await txn.delete('profile');
       await txn.delete('jobs');
-      await txn.delete('status_history');
+              await txn.delete('status_history');
+        await txn.delete('app_settings');
     });
   }
 }

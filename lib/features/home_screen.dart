@@ -6,6 +6,7 @@ import 'job_details_screen.dart';
 import 'profile_screen.dart';
 import 'settings_screen.dart';
 import 'ui_components.dart';
+import 'pilot_logo.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
@@ -23,7 +24,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     final asyncData = ref.watch(appProvider);
     return Scaffold(
       appBar: AppBar(titleSpacing: 18, title: Row(children: [
-        Container(width: 32, height: 32, alignment: Alignment.center, decoration: BoxDecoration(borderRadius: BorderRadius.circular(10), gradient: const LinearGradient(colors: [blue, violet])), child: const Text('JP', style: TextStyle(color: Color(0xFF08101F), fontSize: 14, fontWeight: FontWeight.w800))),
+                  const PilotLogo(size: 32),
         const SizedBox(width: 10), const Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text('JobPilot AI', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800)), Text('Offline-first • Phase 1', style: TextStyle(fontSize: 11, color: muted))]),
       ]), actions: const [Padding(padding: EdgeInsets.only(right: 16), child: Center(child: SampleBadge(text: 'SAMPLE DATA')))]),
       body: SafeArea(child: asyncData.when(loading: () => const Center(child: CircularProgressIndicator()), error: (e, st) => Center(child: Column(mainAxisSize: MainAxisSize.min, children: [Text('Could not load local data: $e'), TextButton(onPressed: () => ref.invalidate(appProvider), child: const Text('Retry'))])), data: (data) => processing ? _processing() : _body(data))),
@@ -43,7 +44,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   Widget _upload(ResumeProfile profile) => ListView(padding: const EdgeInsets.all(18), children: [
     const ScreenTitle(title: 'Start with your resume', subtitle: 'JobPilot reads the file on your phone, pulls out skills, and builds a profile you can edit.', eyebrow: 'STEP 1 OF 3'),
     Semantics(button: true, label: 'Upload PDF or DOCX resume', child: InkWell(onTap: _import, borderRadius: BorderRadius.circular(22), child: Container(padding: const EdgeInsets.symmetric(vertical: 32, horizontal: 20), decoration: BoxDecoration(border: Border.all(color: blue.withValues(alpha: 0.5)), borderRadius: BorderRadius.circular(22), gradient: const LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: [Color(0xFF192949), Color(0xFF101728)])), child: const Column(children: [
-      Icon(Icons.upload_file_rounded, color: violet, size: 42), SizedBox(height: 14), Text('Upload PDF or DOCX resume', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)), SizedBox(height: 8), Text('Tap to pick a file • up to 10 MB', style: TextStyle(color: muted, fontSize: 12)),
+      PilotLogo(size: 72), SizedBox(height: 14), Text('Upload PDF or DOCX resume', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)), SizedBox(height: 8), Text('Tap to pick a file • up to 10 MB', style: TextStyle(color: muted, fontSize: 12)),
     ])))), const SizedBox(height: 22),
     _fact('Stays on your phone. Parsing happens locally; no file is sent to a server.'), _fact('Scanned PDFs need OCR elsewhere. Missing fields remain empty.'), _fact('No account, no sign-in. Basic matching needs no AI key.'),
     const SizedBox(height: 16), const PilotCard(child: Text('Review extracted details before saving. Your original resume is kept in app-local storage.', style: TextStyle(color: muted, height: 1.5))),
@@ -56,14 +57,14 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     PilotCard(child: Column(children: [for (var i = 0; i < 4; i++) ListTile(contentPadding: EdgeInsets.zero, leading: Icon(i < stage ? Icons.check_circle : i == stage ? Icons.pending : Icons.radio_button_unchecked, color: i <= stage ? violet : muted), title: Text(['Reading file', 'Extracting text', 'Finding skills', 'Building profile'][i])), const SizedBox(height: 12), LinearProgressIndicator(value: stage < 0 ? null : (stage + 1) / 4), const SizedBox(height: 12), Text(stage < 0 ? 'Choose a resume in the file picker' : ['Reading bytes', 'Extracting local text', 'Finding candidate fields', 'Saving original resume'][stage], style: const TextStyle(color: muted))])),
   ]);
   Widget _dashboard(AppData data) {
-    final attention = data.jobs.where((j) => [ApplicationStatus.failed, ApplicationStatus.needsAction, ApplicationStatus.submissionUnconfirmed].contains(j.status)).toList();
-    final top = [...data.jobs]..sort((a, b) => b.score.compareTo(a.score));
+    final attention = data.visibleJobs.where((j) => [ApplicationStatus.failed, ApplicationStatus.needsAction, ApplicationStatus.submissionUnconfirmed].contains(j.status)).toList();
+    final top = [...data.visibleJobs]..sort((a, b) => b.score.compareTo(a.score));
     return ListView(padding: const EdgeInsets.all(18), children: [
       const ScreenTitle(title: 'Dashboard', subtitle: 'Your local job search at a glance. All jobs are fictional samples; scores come from your profile.'),
       LayoutBuilder(builder: (context, constraints) => Wrap(spacing: 12, runSpacing: 0, children: [
-        _stat('Sample jobs found', data.jobs.length, constraints.maxWidth), _stat('Matches 70+', data.jobs.where((j) => j.score >= 70).length, constraints.maxWidth),
+        _stat('Sample jobs found', data.visibleJobs.length, constraints.maxWidth), _stat('Matches 70+', data.visibleJobs.where((j) => j.score >= 70).length, constraints.maxWidth),
         _stat('Real submissions', 0, constraints.maxWidth), _stat('Needs attention', attention.length, constraints.maxWidth),
-      ])), sectionHeading('Top matches'), PilotCard(child: Column(children: top.take(3).map((j) => _mini(j, score: true)).toList())),
+      ])), if (data.hideSampleJobs) const PilotCard(child: Text('Sample jobs are hidden. Phase 1 has no live vacancies. Show samples again in Settings.', style: TextStyle(color: muted))), sectionHeading('Top matches'), PilotCard(child: top.isEmpty ? const Text('No visible matches', style: TextStyle(color: muted)) : Column(children: top.take(3).map((j) => _mini(j, score: true)).toList())),
       sectionHeading('Needs attention'), PilotCard(child: attention.isEmpty ? const Text('No sample items need attention', style: TextStyle(color: muted)) : Column(children: attention.map((j) => _mini(j)).toList())),
       GradientButton(label: 'Review recommended jobs', onPressed: () => setState(() => index = 1)),
       TextButton(onPressed: () => setState(() => showUpload = true), child: const Text('Replace resume')),
@@ -72,15 +73,15 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   Widget _stat(String label, int count, double width) => SizedBox(width: (width - 12) / 2, child: PilotCard(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Container(width: 36, height: 2, decoration: const BoxDecoration(gradient: LinearGradient(colors: [blue, violet]))), const SizedBox(height: 13), Text('$count', style: const TextStyle(fontSize: 30, fontWeight: FontWeight.w800)), const SizedBox(height: 6), Text(label, style: const TextStyle(color: muted, fontSize: 12))])));
   Widget _mini(Job j, {bool score = false}) => InkWell(onTap: () => _details(j), child: Padding(padding: const EdgeInsets.symmetric(vertical: 10), child: Row(children: [Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(j.title, style: const TextStyle(fontWeight: FontWeight.w600)), Text('${j.company} · ${score ? j.location : j.status.label}', style: const TextStyle(color: muted, fontSize: 12))])), if (score) Text('${j.score}', style: const TextStyle(color: Color(0xFFBCD0FF), fontWeight: FontWeight.w800))])));
   Widget _jobs(AppData data, {required bool tracker}) {
-    final jobs = data.jobs.where((j) => '${j.title} ${j.company} ${j.location} ${j.skills.join(' ')}'.toLowerCase().contains(query.toLowerCase()) &&
+    final jobs = data.visibleJobs.where((j) => '${j.title} ${j.company} ${j.location} ${j.skills.join(' ')}'.toLowerCase().contains(query.toLowerCase()) &&
       (tracker ? statusFilter == null || j.status == statusFilter : jobFilter == 'All' || jobFilter == 'Sample' || (jobFilter == '80+' ? j.score >= 80 : j.location.toLowerCase().contains(jobFilter.toLowerCase())))).toList()..sort((a, b) => b.score.compareTo(a.score));
     return ListView(padding: const EdgeInsets.all(18), children: [
-      ScreenTitle(title: tracker ? 'Application tracker' : 'Recommended jobs', subtitle: tracker ? 'Manual practice records only. Sample Applied statuses do not mean real submissions.' : 'Ranked by your local match score. All ${data.jobs.length} listings are samples.'),
+      ScreenTitle(title: tracker ? 'Application tracker' : 'Recommended jobs', subtitle: tracker ? 'Manual practice records only. Sample Applied statuses do not mean real submissions.' : data.hideSampleJobs ? 'Sample jobs are hidden. Live jobs are not included in Phase 1.' : 'Fictional demo jobs, not real vacancies. Ranked by your resume match score.'),
       TextField(key: ValueKey(index), onChanged: (v) => setState(() => query = v), decoration: const InputDecoration(labelText: 'Search jobs', hintText: 'Title, company, location or skills', prefixIcon: Icon(Icons.search))), const SizedBox(height: 14),
       SingleChildScrollView(scrollDirection: Axis.horizontal, child: Row(children: tracker ? [
         _chip('All', statusFilter == null, () => setState(() => statusFilter = null)), ...ApplicationStatus.values.map((s) => _chip(s.label, statusFilter == s, () => setState(() => statusFilter = s))),
       ] : ['All', '80+', 'Remote', 'Pune', 'Kolhapur', 'Sample'].map((s) => _chip(s, jobFilter == s, () => setState(() => jobFilter = s))).toList())), const SizedBox(height: 16),
-      if (jobs.isEmpty) const Text('No sample jobs match this search or filter', style: TextStyle(color: muted)),
+      if (jobs.isEmpty) const Text('No visible jobs. Samples may be hidden in Settings or excluded by your filter.', style: TextStyle(color: muted)),
       if (tracker) PilotCard(child: Column(children: jobs.map((j) => InkWell(onTap: () => _details(j), child: Padding(padding: const EdgeInsets.symmetric(vertical: 12), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(j.title, style: const TextStyle(fontWeight: FontWeight.w600)), const SizedBox(height: 5), Text('${j.company} · ${j.updatedAt.isEmpty ? 'No date' : j.updatedAt.split('T').first}', style: const TextStyle(color: muted, fontSize: 12)), const SizedBox(height: 8), SampleBadge(text: j.status.label), if (j.error.isNotEmpty) Padding(padding: const EdgeInsets.only(top: 8), child: Text(j.error, style: const TextStyle(color: Color(0xFFFFB3A8), fontSize: 12)))])))).toList()))
       else ...jobs.map((j) => PilotCard(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Row(crossAxisAlignment: CrossAxisAlignment.start, children: [Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(j.title, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700)), const SizedBox(height: 6), Text('${j.company} · ${j.location}', style: const TextStyle(color: muted, fontSize: 13)), const SizedBox(height: 10), const SampleBadge()])), const SizedBox(width: 14), ScoreRing(score: j.score)]), TextButton(onPressed: () => _details(j), child: const Text('View details ›'))]))),
     ]);

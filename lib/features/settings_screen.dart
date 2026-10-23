@@ -26,9 +26,14 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   void dispose() { keyController.dispose(); super.dispose(); }
   @override
   Widget build(BuildContext context) {
-    final body = ListView(padding: const EdgeInsets.all(18), children: [
+          final data = ref.watch(appProvider).value;
+      final body = ListView(padding: const EdgeInsets.all(18), children: [
       const ScreenTitle(title: 'Settings', subtitle: 'Matching works without AI. Your data stays on this device.'),
-      PilotCard(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              PilotCard(child: SwitchListTile(contentPadding: EdgeInsets.zero, value: data?.hideSampleJobs ?? false, title: const Text('Hide sample jobs'), subtitle: const Text('Demo listings only, not real vacancies. This hides them from Home, Jobs and Tracker without deleting records. Live jobs come in Phase 2.'), onChanged: data == null ? null : (value) async {
+          try { await ref.read(appProvider.notifier).setHideSampleJobs(value); }
+          catch (e) { if (mounted) setState(() => message = 'Could not save sample visibility: $e'); }
+        })),
+        PilotCard(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         const SwitchListTile(contentPadding: EdgeInsets.zero, value: false, onChanged: null, title: Text('Use Groq AI ranking'), subtitle: Text('Coming in Phase 3. No Groq requests are made in this MVP.')),
         const SizedBox(height: 12), TextField(controller: keyController, obscureText: true, enableSuggestions: false, autocorrect: false, decoration: const InputDecoration(labelText: 'Groq API key (optional)', hintText: 'Stored locally, not used in Phase 1')),
         GradientButton(label: busy ? 'Please wait...' : 'Save key on this device', onPressed: busy ? null : () async {

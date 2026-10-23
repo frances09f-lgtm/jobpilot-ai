@@ -53,7 +53,12 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
           if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Could not save profile: $e')));
         } finally { if (mounted) setState(() => saving = false); }
       }),
-      ExpansionTile(title: const Text('Original extracted text'), children: [SelectableText(widget.profile.rawText.isEmpty ? 'No resume uploaded' : widget.profile.rawText)]),
+              if (widget.profile.rawText.isNotEmpty) TextButton(onPressed: () {
+          final current = ResumeProfile(fields: {for (final entry in controllers.entries) entry.key: entry.value.text}, rawText: widget.profile.rawText);
+          final filled = ResumeParser().prefillMissing(current);
+          setState(() { for (final key in profileFields) { controllers[key]!.text = filled.get(key); } });
+        }, child: const Text('Fill empty fields from saved resume')),
+        ExpansionTile(title: const Text('Original extracted text'), children: [SelectableText(widget.profile.rawText.isEmpty ? 'No resume uploaded' : widget.profile.rawText)]),
     ]),
   );
 }

@@ -12,19 +12,23 @@ import '../data/models.dart';
 final repositoryProvider = Provider((ref) => LocalRepository());
 final appProvider = AsyncNotifierProvider<AppController, AppData>(AppController.new);
 class AppData {
-  const AppData(this.profile, this.jobs);
+      const AppData(this.profile, this.jobs, {this.hideSampleJobs = false});
   final ResumeProfile profile;
-  final List<Job> jobs;
+      final List<Job> jobs;
+    final bool hideSampleJobs;
+    List<Job> get visibleJobs => jobs.where((j) => !hideSampleJobs || !j.isSample).toList();
 }
 class AppController extends AsyncNotifier<AppData> {
   LocalRepository get repo => ref.read(repositoryProvider);
   @override
   Future<AppData> build() async {
     await repo.seed();
-    final profile = await repo.loadProfile();
+          final stored = await repo.loadProfile();
+      final profile = ResumeParser().prefillMissing(stored);
+      if (profile.fields.toString() != stored.fields.toString()) await repo.saveProfile(profile);
     final jobs = (await repo.loadJobs()).map((j) => MatchingService().match(j, profile)).toList();
     await repo.saveJobs(jobs);
-    return AppData(profile, jobs);
+          return AppData(profile, jobs, hideSampleJobs: await repo.loadHideSampleJobs());
   }
   Future<ResumeProfile?> importResume({void Function(int)? onStage}) async {
     final file = await FilePicker.pickFile(type: FileType.custom, allowedExtensions: ['pdf', 'docx']);
@@ -50,7 +54,7 @@ class AppController extends AsyncNotifier<AppData> {
     final jobs = current.jobs.map((j) => MatchingService().match(j, profile)).toList();
     await repo.saveProfile(profile);
     await repo.saveJobs(jobs);
-    state = AsyncData(AppData(profile, jobs));
+          state = AsyncData(AppData(profile, jobs, hideSampleJobs: current.hideSampleJobs));
     if (current.profile.resumePath.isNotEmpty && current.profile.resumePath != profile.resumePath) {
       final old = File(current.profile.resumePath);
       if (await old.exists()) await old.delete();
@@ -60,9 +64,14 @@ class AppController extends AsyncNotifier<AppData> {
     final current = state.requireValue;
     final updated = job.copyWith(status: status, error: note, updatedAt: DateTime.now().toUtc().toIso8601String());
     await repo.updateStatus(updated);
-    state = AsyncData(AppData(current.profile, current.jobs.map((j) => j.id == job.id ? updated : j).toList()));
+    state = AsyncData(AppData(current.profile, current.jobs.map((j) => j.id == job.id ? updated : j).toList(), hideSampleJobs: current.hideSampleJobs));
   }
-  Future<void> clearAll() async {
+      Future<void> setHideSampleJobs(bool value) async {
+      final current = state.requireValue;
+      await repo.saveHideSampleJobs(value);
+      state = AsyncData(AppData(current.profile, current.jobs, hideSampleJobs: value));
+    }
+    Future<void> clearAll() async {
     final directory = await getApplicationDocumentsDirectory();
     final resumes = Directory(p.join(directory.path, 'resumes'));
     if (await resumes.exists()) await resumes.delete(recursive: true);

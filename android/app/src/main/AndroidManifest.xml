@@ -2,7 +2,7 @@
     <application android:allowBackup="false"
         android:label="JobPilot AI"
         android:name="${applicationName}"
-        android:icon="@mipmap/ic_launcher">
+        android:icon="@mipmap/jobpilot_logo">
         <activity
             android:name=".MainActivity"
             android:exported="true"

@@ -37,7 +37,14 @@ class DocumentExtractor {
     final document = archive.findFile('word/document.xml');
     if (document == null) throw const FormatException('This is not a valid DOCX document.');
     if (document.size > 2 * 1024 * 1024) throw const FormatException('DOCX text exceeds the 2 MB extraction limit.');
-    final xml = XmlDocument.parse(utf8.decode(document.content));
+    final extras = archive.files.where((f) => RegExp(r'^word/(?:header|footer)\d+\.xml$').hasMatch(f.name)).toList()..sort((a, b) => a.name.compareTo(b.name));
+    final parts = [...extras.where((f) => f.name.contains('/header')), document, ...extras.where((f) => f.name.contains('/footer'))];
+    if (parts.fold<int>(0, (sum, f) => sum + f.size) > 2 * 1024 * 1024) throw const FormatException('DOCX text exceeds the 2 MB extraction limit.');
+    return parts.map((part) => _paragraphs(utf8.decode(part.content))).join('\n');
+  }
+
+  String _paragraphs(String source) {
+    final xml = XmlDocument.parse(source);
     return xml.descendants.whereType<XmlElement>().where((e) => e.name.local == 'p').map((paragraph) {
       final buffer = StringBuffer();
       for (final node in paragraph.descendants.whereType<XmlElement>()) {
