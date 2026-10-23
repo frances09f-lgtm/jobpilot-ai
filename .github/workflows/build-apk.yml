@@ -1,0 +1,79 @@
+name: Analyze, test and build APK
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: jobpilot-apk-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: subosito/flutter-action@v2.23.0
+        with:
+          flutter-version: '3.47.7'
+          channel: stable
+          cache: true
+      - name: Inspect environment
+        run: |
+          flutter --version
+          flutter doctor -v
+          java -version
+      - name: Generate Android scaffold if missing
+        run: |
+          if [ ! -d android ]; then
+            flutter create --platforms=android --org com.ambi.jobpilot --project-name jobpilot_ai /tmp/jobpilot_scaffold
+            cp -R /tmp/jobpilot_scaffold/android .
+            cp /tmp/jobpilot_scaffold/.metadata .
+          fi
+          python3 - <<'PY'
+          from pathlib import Path
+          path = Path('android/app/src/main/AndroidManifest.xml')
+          text = path.read_text().replace('android:label="jobpilot_ai"', 'android:label="JobPilot AI"')
+          if 'android:allowBackup=' not in text:
+              text = text.replace('<application', '<application android:allowBackup="false"')
+          path.write_text(text)
+          PY
+      - name: Resolve dependencies
+        run: flutter pub get
+      - name: Commit generated Android configuration and lockfile
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add android .metadata pubspec.lock
+          if ! git diff --cached --quiet; then
+            git commit -m 'Persist generated Android scaffold and dependency lock [skip ci]'
+            git push origin HEAD:main
+          fi
+      - name: Analyze
+        run: flutter analyze
+      - name: Unit tests
+        run: flutter test --reporter expanded
+      - name: Build release APK
+        run: flutter build apk --release
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: JobPilot-AI-APK
+          path: build/app/outputs/flutter-apk/app-release.apk
+          if-no-files-found: error
+          retention-days: 30
+      - name: Publish public APK release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          cp build/app/outputs/flutter-apk/app-release.apk JobPilot-AI.apk
+          if gh release view v0.1.0 >/dev/null 2>&1; then
+            gh release upload v0.1.0 JobPilot-AI.apk --clobber
+          else
+            gh release create v0.1.0 JobPilot-AI.apk --target main --title 'JobPilot AI Phase 1 MVP' --notes 'Offline resume matching and manual tracker. Sample jobs only. Development APK, debug-keystore signing. Analyze and tests passed in CI; not tested on a real phone.'
+          fi
