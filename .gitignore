@@ -1,0 +1,28 @@
+# Flutter and local builds
+.dart_tool/
+.flutter-plugins*
+.packages
+build/
+coverage/
+*.iml
+.idea/
+.vscode/
+android/local.properties
+android/.gradle/
+android/captures/
+android/key.properties
+*.jks
+*.keystore
+# Never commit personal documents or secrets
+.env
+.env.*
+!.env.example
+secrets/
+resumes/
+*.pdf
+*.docx
+*.db
+*.sqlite*
+*.apk
+*.aab
+.DS_Store
