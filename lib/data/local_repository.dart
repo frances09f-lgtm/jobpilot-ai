@@ -27,7 +27,9 @@ class LocalRepository {
     final rows = await (await database).query('profile', where: 'id = ?', whereArgs: [1]);
     return rows.isEmpty ? ResumeProfile() : ResumeProfile.fromJson(jsonDecode(rows.first['data'] as String) as Map<String, dynamic>);
   }
-  Future<void> saveProfile(ResumeProfile profile) async => (await database).insert('profile', {'id': 1, 'data': jsonEncode(profile.toJson())}, conflictAlgorithm: ConflictAlgorithm.replace);
+  Future<void> saveProfile(ResumeProfile profile) async {
+    await (await database).insert('profile', {'id': 1, 'data': jsonEncode(profile.toJson())}, conflictAlgorithm: ConflictAlgorithm.replace);
+  }
   Future<List<Job>> loadJobs() async => (await (await database).query('jobs', orderBy: 'score DESC, title ASC')).map(Job.fromRow).toList();
   Future<void> saveJobs(List<Job> jobs) async {
     final batch = (await database).batch();
