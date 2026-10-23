@@ -1,4 +1,5 @@
 import '../data/models.dart';
+import 'resume_location_parser.dart';
 
 /// Copies resume evidence only. Uncertain fields remain empty for review.
 class ResumeParser {
@@ -57,7 +58,7 @@ class ResumeParser {
         continue;
       }
       var identity = false;
-      for (final field in ['name', 'location', 'roles']) {
+      for (final field in ['name', 'roles']) {
         final aliases = field == 'location' ? 'location|address|city' : field == 'roles' ? 'role|job title|target role|roles' : 'name|full name';
         final match = RegExp('^(?:$aliases)\\s*[:|]\\s*(.+)\$', caseSensitive: false).firstMatch(line);
         if (match != null) {
@@ -79,24 +80,10 @@ class ResumeParser {
     }
     final contactHeader = header.any((l) => _email.hasMatch(l) || _phone(l).isNotEmpty);
     if (result['name']!.isEmpty && contactHeader) {
-      final candidates = header.take(4).map((l) => l.split(RegExp(r'\s*[|•]\s*')).first.trim()).where(_nameLike).toList();
+      final candidates = header.take(4).map((l) => l.split(RegExp(r'\s*[|•]\s*')).first.trim()).where((v) => _nameLike(v) && !ResumeLocationParser.locationShape(v)).toList();
       if (candidates.length == 1) result['name'] = candidates.single;
     }
-    if (result['location']!.isEmpty && contactHeader && result['name']!.isNotEmpty) {
-      final candidates = <String>{};
-      for (final line in header) {
-        for (final segment in line.split(RegExp(r'[|•]'))) {
-          final value = segment.trim();
-          // Copy a place-shaped contact segment. No city database or default.
-          if (value.contains(',') && !value.contains('@') && value.length < 100 &&
-              RegExp(r'^[\p{L}\p{M} .\-]+,\s*[\p{L}\p{M} ,\-]+(?:\s+\d{4,8})?$', unicode: true).hasMatch(value) &&
-              !knownSkills.any((s) => containsTerm(value, s)) && value != result['name']) {
-            candidates.add(value);
-          }
-        }
-      }
-      if (candidates.length == 1) result['location'] = candidates.single;
-    }
+    result['location'] = ResumeLocationParser().parse(lines, header);
     for (final field in ['education', 'experience', 'projects', 'certifications']) {
       result[field] = sections[field]?.join('\n') ?? '';
     }

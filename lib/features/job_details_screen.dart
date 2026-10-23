@@ -16,15 +16,15 @@ class JobDetailsScreen extends ConsumerWidget {
     final job = jobs.first;
     return Scaffold(appBar: AppBar(title: const Text('Back to jobs')), body: ListView(padding: const EdgeInsets.all(18), children: [
       Row(children: [ScoreRing(score: job.score, size: 88), const SizedBox(width: 18), Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        if (job.isSample) const SampleBadge(), const SizedBox(height: 8), Text(job.title, style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w800)), const SizedBox(height: 6), Text('${job.company} · ${job.location}', style: const TextStyle(color: muted)),
+         const SizedBox(height: 8), Text(job.title, style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w800)), const SizedBox(height: 6), Text('${job.company} · ${job.location}', style: const TextStyle(color: muted)),
       ]))]),
       sectionHeading('Why it matches'), PilotCard(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(job.explanation, style: const TextStyle(height: 1.5)), const SizedBox(height: 12), Text('Matched skills: ${job.matchedSkills.isEmpty ? 'None recorded' : job.matchedSkills.join(', ')}')])),
       sectionHeading('Skill gaps'), Wrap(spacing: 8, children: job.gaps.map((s) => Chip(label: Text(s), backgroundColor: const Color(0xFF302738))).toList()),
       if (job.gaps.isEmpty) const Text('No listed gaps'),
       sectionHeading('Description'), Text(job.description, style: const TextStyle(height: 1.6, color: Color(0xFFCFD8EC))),
       const SizedBox(height: 20), const PilotCard(child: Text('Unsupported sites apply manually. Never bypass logins, CAPTCHAs or anti-bot checks. Phase 1 does not submit applications.')),
-      if (job.isSample) const Text('This is a fictional sample. There is no official employer application page. Tracker updates are practice only.', style: TextStyle(color: muted)),
-      GradientButton(label: 'Open official application page', onPressed: job.isSample || job.applicationUrl.isEmpty ? null : () async {
+      
+      GradientButton(label: 'Open official application page', onPressed: job.applicationUrl.isEmpty ? null : () async {
         final uri = Uri.tryParse(job.applicationUrl);
         if (uri == null || uri.scheme != 'https' || uri.host.isEmpty) {
           ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('The official application URL is missing or invalid.'))); return;
@@ -45,7 +45,7 @@ class JobDetailsScreen extends ConsumerWidget {
     final note = TextEditingController(text: job.error);
     final result = await showDialog<bool>(context: context, builder: (dialogContext) => StatefulBuilder(builder: (context, setDialogState) => AlertDialog(
       title: const Text('Manually recorded status'), content: SingleChildScrollView(child: Column(mainAxisSize: MainAxisSize.min, children: [
-        const Text('Your record only. Sample Applied entries are not real applications.'), const SizedBox(height: 16),
+        const Text('Your record only. This does not submit or verify an application.'), const SizedBox(height: 16),
         DropdownButtonFormField<ApplicationStatus>(initialValue: status, isExpanded: true, items: ApplicationStatus.values.map((s) => DropdownMenuItem(value: s, child: Text(s.label))).toList(), onChanged: (s) { if (s != null) setDialogState(() => status = s); }),
         const SizedBox(height: 16), TextField(controller: note, maxLines: 3, decoration: const InputDecoration(labelText: 'Note / error (optional)')),
       ])), actions: [TextButton(onPressed: () => Navigator.pop(dialogContext, false), child: const Text('Cancel')), FilledButton(onPressed: () => Navigator.pop(dialogContext, true), child: const Text('Save'))],

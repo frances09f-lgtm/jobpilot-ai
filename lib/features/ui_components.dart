@@ -24,8 +24,8 @@ class ScreenTitle extends StatelessWidget {
     Text(subtitle, style: const TextStyle(color: muted, height: 1.5, fontSize: 14)),
   ]));
 }
-class SampleBadge extends StatelessWidget {
-  const SampleBadge({super.key, this.text = 'SAMPLE'});
+class StatusBadge extends StatelessWidget {
+  const StatusBadge({super.key, required this.text});
   final String text;
   @override
   Widget build(BuildContext context) => Container(padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
@@ -53,3 +53,13 @@ class GradientButton extends StatelessWidget {
   ));
 }
 Widget sectionHeading(String text) => Padding(padding: const EdgeInsets.only(top: 10, bottom: 12), child: Text(text, style: const TextStyle(fontSize: 17, fontWeight: FontWeight.bold)));
+
+class JobsEmptyState extends StatelessWidget {
+  const JobsEmptyState({super.key});
+  @override
+  Widget build(BuildContext context) => const PilotCard(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+    Icon(Icons.work_outline, color: violet, size: 32), SizedBox(height: 12),
+    Text('No jobs yet, live jobs come in the next phase', style: TextStyle(fontWeight: FontWeight.w600, height: 1.5)),
+    SizedBox(height: 8), Text('Add a job by hand to use matching and the tracker now.', style: TextStyle(color: muted, height: 1.5)),
+  ]));
+}
