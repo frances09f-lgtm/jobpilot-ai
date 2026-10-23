@@ -30,9 +30,11 @@ void main() {
   testWidgets('manual form starts with empty fields and blocks missing requirements', (tester) async {
     await tester.pumpWidget(const ProviderScope(child: MaterialApp(home: AddJobScreen())));
     expect(tester.widgetList<TextFormField>(find.byType(TextFormField)).every((f) => f.controller!.text.isEmpty), isTrue);
-    await tester.scrollUntilVisible(find.text('Save job and calculate match'), 200);
+    final scrollable = find.descendant(of: find.byType(ListView), matching: find.byType(Scrollable)).first;
+    await tester.scrollUntilVisible(find.text('Save job and calculate match'), 200, scrollable: scrollable);
     await tester.tap(find.text('Save job and calculate match'));
     await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(find.byKey(const ValueKey('job-title')), -200, scrollable: scrollable);
     expect(find.text('Required'), findsWidgets);
     expect(tester.takeException(), isNull);
   });
