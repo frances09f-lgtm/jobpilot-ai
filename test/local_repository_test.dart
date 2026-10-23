@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
@@ -22,6 +23,8 @@ void main() {
       await repo.updateStatus(updated);
       expect((await repo.loadJobs()).single.status, ApplicationStatus.applied);
       expect(await (await repo.database).query('status_history'), hasLength(1));
+      await repo.close();
+      expect((await repo.loadJobs()).single.title, 'Flutter Developer');
       await repo.clearAll();
       expect(await repo.loadJobs(), isEmpty);
       expect(await (await repo.database).query('status_history'), isEmpty);
@@ -36,16 +39,15 @@ void main() {
         if (version == 2) await db.execute('CREATE TABLE app_settings (key TEXT PRIMARY KEY, value TEXT NOT NULL)');
       });
       final legacyProfile = ResumeProfile(fields: {'name': 'Edited person', 'location': 'Edited city'}, rawText: 'saved text', resumePath: '/private/resume.pdf');
-      // JSON comes from the public model, no personal user information.
-      final helper = LocalRepository(databasePath: path);
+      await legacy.insert('profile', {'id': 1, 'data': jsonEncode(legacyProfile.toJson())});
       await legacy.insert('jobs', {...real.toRow(), 'is_sample': 0});
       await legacy.insert('jobs', {...real.toRow(), 'id': 'legacy-demo', 'is_sample': 1});
       for (final id in ['real', 'legacy-demo']) {
         await legacy.insert('status_history', {'job_id': id, 'status': 'applied', 'changed_at': '', 'note': ''});
       }
       await legacy.close();
+      final helper = LocalRepository(databasePath: path);
       try {
-        await helper.saveProfile(legacyProfile);
         expect((await helper.loadJobs()).map((j) => j.id), ['real']);
         expect((await helper.loadProfile()).get('location'), 'Edited city');
         expect((await helper.loadProfile()).resumePath, '/private/resume.pdf');
