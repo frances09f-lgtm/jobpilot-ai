@@ -28,19 +28,8 @@ jobs:
           flutter --version
           flutter doctor -v
           java -version
-      - name: Prepare maintenance sources
-        run: python3 tool/prepare_sources.py
       - name: Resolve dependencies
         run: flutter pub get
-      - name: Commit maintained source and lockfile
-        run: |
-          git config user.name 'github-actions[bot]'
-          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add android .metadata pubspec.lock pubspec.yaml lib test README.md
-          if ! git diff --cached --quiet; then
-            git commit -m 'Persist maintained profile, logo and sample visibility source [skip ci]'
-            git push origin HEAD:main
-          fi
       - name: Analyze
         run: flutter analyze
       - name: Unit tests
