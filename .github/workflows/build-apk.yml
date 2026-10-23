@@ -28,6 +28,20 @@ jobs:
           flutter --version
           flutter doctor -v
           java -version
+      - name: Apply reviewed source patches
+        run: |
+          python3 scripts/remove_demo_ui.py
+          python3 scripts/patch_location.py
+      - name: Save generated sources
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          git config user.name github-actions
+          git config user.email github-actions@users.noreply.github.com
+          rm scripts/remove_demo_ui.py scripts/patch_location.py
+          git add lib scripts
+          git commit -m 'Save reviewed no-demo UI and location parser [skip ci]'
+          git push
       - name: Resolve dependencies
         run: flutter pub get
       - name: Analyze
@@ -35,7 +49,7 @@ jobs:
       - name: Unit tests
         run: flutter test --reporter expanded
       - name: Build release APK (arm64-v8a only)
-        run: flutter build apk --release --target-platform android-arm64 --split-debug-info=build/symbols
+        run: flutter build apk --release --target-platform android-arm64 --split-debug-info=build/symbols --tree-shake-icons
       - name: Report APK size and native components
         run: |
           ls -l build/app/outputs/flutter-apk/
@@ -57,6 +71,6 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           cp build/app/outputs/flutter-apk/app-release.apk JobPilot-AI.apk
-          NOTES='Phase 1: offline resume prefill and matching, manual tracker, fictional sample jobs with a hide switch. Original vector logo. arm64-v8a only. R8/resource shrinking. Analyze and tests passed in this CI run. Development debug-key signing. Owner tested the earlier MVP; this maintenance build has not been tested on a phone.'
+          NOTES='Phase 1: offline resume prefill including address/PIN text, local manual jobs, matching and manual tracker. No bundled demo jobs; upgrade removes legacy demo records. Navy/blue/violet logo and UI. arm64-v8a only, R8/resource shrinking. Analyze and tests passed in this CI run. Development debug-key signing. This update has not been tested on a phone.'
           gh release upload v0.1.0 JobPilot-AI.apk --clobber
           gh release edit v0.1.0 --notes "$NOTES"
