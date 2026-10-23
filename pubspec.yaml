@@ -1,7 +1,7 @@
 name: jobpilot_ai
 description: Offline-first resume matching and application tracker.
 publish_to: none
-version: 0.1.0+3
+version: 0.1.1+4
 environment:
   sdk: '>=3.13.0 <4.0.0'
 dependencies:
@@ -17,6 +17,7 @@ dependencies:
   xml: ^7.0.1
   url_launcher: ^6.3.3
   flutter_secure_storage: ^11.2.0
+  http: ^1.6.0
 dev_dependencies:
   flutter_test:
     sdk: flutter
